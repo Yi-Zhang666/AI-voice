@@ -6,12 +6,11 @@ TTS 服务（Qiniu 网关版）
 - 保存 mp3 到 static/audio/，返回 (audio_url, tts_b64)
 
 需要的环境变量 (.env)：
-  OPENAI_API_KEY=sk-你的七牛AI密钥
+  OPENAI_API_KEY=sk-七牛AI密钥
   OPENAI_BASE_URL=https://openai.qiniu.com/v1
-  OPENAI_CHAT_MODEL=deepseek-v3   # LLM 用，不影响本文件
   USE_TTS=1
   OPENAI_TTS_MODE=qiniu
-  QINIU_TTS_VOICE=qiniu_zh_female_tmjxxy
+  QINIU_TTS_VOICE=qiniu_zh_male_ybxknjs   # 默认兜底音色（可改）
   QINIU_TTS_SPEED=1.0
   PUBLIC_BASE_URL=http://localhost:8000
 """
@@ -30,7 +29,7 @@ OPENAI_TTS_MODE = os.getenv("OPENAI_TTS_MODE", "qiniu").lower()
 BASE_URL = os.getenv("OPENAI_BASE_URL", "https://openai.qiniu.com/v1").rstrip("/")
 API_KEY = (os.getenv("OPENAI_API_KEY") or "").strip()
 
-DEFAULT_VOICE = os.getenv("QINIU_TTS_VOICE", "qiniu_zh_female_tmjxxy")
+DEFAULT_VOICE = os.getenv("QINIU_TTS_VOICE", "qiniu_zh_male_ybxknjs")
 SPEED = float(os.getenv("QINIU_TTS_SPEED", "1.0"))
 PUBLIC_BASE = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
 
@@ -42,7 +41,6 @@ AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 # =========================
 #  角色名规范化与同义词映射
 # =========================
-# 允许的分隔符（空格、下划线、点号、中点等）
 _SEP = r"[·•・\s\._．-]+"
 
 def _norm(name: str) -> str:
@@ -50,63 +48,62 @@ def _norm(name: str) -> str:
     s = (name or "").strip().lower()
     return re.sub(_SEP, "", s)
 
-# 原始别名映射：随时按需增删
+# 你账号 voice/list 中存在的 voice_type 映射（安全可用）
 ROLE_VOICE_MAP_RAW = {
-    # 苏格拉底
-    "socrates": "qiniu_zh_male_lpsmtb",
-    "苏格拉底": "qiniu_zh_male_lpsmtb",
+    # —— 中文角色 —— #
+    # 渊博学科男教师（沉稳学术）
+    "socrates": "qiniu_zh_male_ybxknjs",
+    "苏格拉底": "qiniu_zh_male_ybxknjs",
 
-    # 孔子
-    "confucius": "qiniu_zh_male_deep",
-    "孔子": "qiniu_zh_male_deep",
+    # 磁性课件男声（庄重）
+    "confucius": "qiniu_zh_male_cxkjns",
+    "孔子": "qiniu_zh_male_cxkjns",
 
-    # 林黛玉
-    "lin dai yu": "qiniu_zh_female_tmjxxy",
-    "lin_daiyu": "qiniu_zh_female_tmjxxy",
-    "林黛玉": "qiniu_zh_female_tmjxxy",
+    # 温婉学科讲师（温柔）
+    "lin dai yu": "qiniu_zh_female_wwxkjx",
+    "lin_daiyu": "qiniu_zh_female_wwxkjx",
+    "林黛玉": "qiniu_zh_female_wwxkjx",
 
-    # 孙悟空（齐天大圣/孙行者）
-    "sun wukong": "qiniu_zh_male_yzcs",
-    "sun_wukong": "qiniu_zh_male_yzcs",
-    "孙悟空": "qiniu_zh_male_yzcs",
-    "齐天大圣": "qiniu_zh_male_yzcs",
-    "孙行者": "qiniu_zh_male_yzcs",
+    # 名著角色猴哥（最贴脸）
+    "sun wukong": "qiniu_zh_male_mzjsxg",
+    "sun_wukong": "qiniu_zh_male_mzjsxg",
+    "孙悟空": "qiniu_zh_male_mzjsxg",
+    "齐天大圣": "qiniu_zh_male_mzjsxg",
+    "孙行者": "qiniu_zh_male_mzjsxg",
 
-    # 莎士比亚
-    "shakespeare": "qiniu_en_male_std",
-    "莎士比亚": "qiniu_en_male_std",
+    # —— 英文/英式角色 —— #
+    # 英式英语男（莎士比亚/福尔摩斯/牛顿/哈利）
+    "shakespeare": "qiniu_en_male_ysyyn",
+    "莎士比亚": "qiniu_en_male_ysyyn",
 
-    # 福尔摩斯
-    "sherlock": "qiniu_en_male_british",
-    "sherlock holmes": "qiniu_en_male_british",
-    "福尔摩斯": "qiniu_en_male_british",
+    "sherlock": "qiniu_en_male_ysyyn",
+    "sherlock holmes": "qiniu_en_male_ysyyn",
+    "福尔摩斯": "qiniu_en_male_ysyyn",
 
-    # 牛顿
-    "newton": "qiniu_en_male_calm",
-    "isaac newton": "qiniu_en_male_calm",
-    "牛顿": "qiniu_en_male_calm",
+    "newton": "qiniu_en_male_ysyyn",
+    "isaac newton": "qiniu_en_male_ysyyn",
+    "牛顿": "qiniu_en_male_ysyyn",
 
-    # 哈利·波特（含不同写法）
-    "harry potter": "qiniu_en_male_boyish",
-    "harry_potter": "qiniu_en_male_boyish",
-    "哈利波特": "qiniu_en_male_boyish",
-    "哈利·波特": "qiniu_en_male_boyish",
+    "harry potter": "qiniu_en_male_ysyyn",
+    "harry_potter": "qiniu_en_male_ysyyn",
+    "哈利波特": "qiniu_en_male_ysyyn",
+    "哈利·波特": "qiniu_en_male_ysyyn",
 }
 
 # 规范化后的映射表（查表用）
-ROLE_VOICE_MAP = { _norm(k): v for k, v in ROLE_VOICE_MAP_RAW.items() }
+ROLE_VOICE_MAP = {_norm(k): v for k, v in ROLE_VOICE_MAP_RAW.items()}
 
-# 兜底音色
-FALLBACK_ZH = "qiniu_zh_female_tmjxxy"
-FALLBACK_EN = "qiniu_en_male_std"
+# 兜底音色（中文/英文）
+FALLBACK_ZH = "qiniu_zh_male_ybxknjs"
+FALLBACK_EN = "qiniu_en_male_ysyyn"
 
 def _looks_chinese(s: str) -> bool:
     return bool(s and re.search(r"[\u4e00-\u9fff]", s))
 
 def pick_voice(role_name: Optional[str], reply_text: Optional[str] = None, voice_override: Optional[str] = None) -> str:
     """
-    选音逻辑优先级：
-      1) voice_override（前端/会话中明确指定）
+    选音优先级：
+      1) voice_override（前端明确指定）
       2) 命中同义词映射（中英文/别名均可）
       3) 角色名或回复文本含中文 → 中文兜底
       4) 英文兜底
@@ -142,7 +139,7 @@ def _qiniu_tts_request(text: str, voice_type: str) -> Optional[str]:
             "speed_ratio": SPEED,
         },
         "request": {
-            "text": text[:800],  # 防止极长文本
+            "text": text[:800],
         },
     }
     resp = requests.post(url, json=payload, headers=headers, timeout=60)
@@ -172,7 +169,6 @@ def synthesize(
       - 失败或未启用：返回 (None, None)
     """
     if not tts_available():
-        # 未启用或缺少配置
         return None, None
 
     try:
@@ -192,13 +188,8 @@ def synthesize(
         print("[TTS] synthesize failed:", e)
         return None, None
 
-# =========================
-#  可选：列出可用音色（前端下拉）
-# =========================
 def list_voices() -> Optional[list]:
-    """
-    代理七牛 GET /voice/list，返回列表（失败返回 None）
-    """
+    """代理七牛 GET /voice/list，返回列表（失败返回 None）"""
     try:
         url = f"{BASE_URL}/voice/list"
         headers = {"Authorization": f"Bearer {API_KEY}"}
