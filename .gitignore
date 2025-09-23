@@ -16,3 +16,6 @@ __pycache__/
 .idea/
 
 .DS_Store
+# Generated TTS audio
+backend/static/audio/*
+!backend/static/audio/.gitkeep
