@@ -19,6 +19,7 @@ class ChatResp(BaseModel):
     session_id: str
     role_name: str
     reply_text: str
+    audio_url: Optional[str] = None   
     tts_b64: Optional[str] = None
 
 class TTSReq(BaseModel):
