@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pydantic[dotenv]
+python-multipart
+openai==1.*
