@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI角色扮演 - 与历史名人对话</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        header h1 {
+            font-size: 3.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
+        }
+        
+        header p {
+            font-size: 1.3em;
+            opacity: 0.95;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        /* 搜索区域 */
+        .search-section {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .search-box input {
+            flex: 1;
+            padding: 18px 25px;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .search-box input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .search-btn {
+            padding: 18px 35px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102,126,234,0.3);
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102,126,234,0.4);
+        }
+        
+        /* 角色网格 */
+        .characters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .character-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .character-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(102,126,234,0.05) 0%, rgba(118,75,162,0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .character-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+        
+        .character-card:hover::before {
+            opacity: 1;
+        }
+        
+        .character-avatar {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .character-name {
+            font-size: 1.6em;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+            color: #2d3748;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .character-description {
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .character-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .skill-tag {
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+            color: #4a5568;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .character-card:hover .skill-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        /* 聊天区域 */
+        .chat-section {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            display: none;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid rgba(102,126,234,0.1);
+            margin-bottom: 25px;
+        }
+        
+        .chat-avatar {
+            font-size: 3em;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(102,126,234,0.3);
+        }
+        
+        .chat-info h3 {
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        
+        .chat-info p {
+            color: #718096;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+        
+        .back-btn {
+            margin-left: auto;
+            padding: 12px 25px;
+            background: rgba(226,232,240,0.8);
+            color: #4a5568;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .back-btn:hover {
+            background: #cbd5e0;
+            transform: translateY(-2px);
+        }
+        
+        .conversation {
+            height: 450px;
+            overflow-y: auto;
+            padding: 25px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(102,126,234,0.1);
+        }
+        
+        .message {
+            margin: 20px 0;
+            padding: 18px 22px;
+            border-radius: 18px;
+            max-width: 85%;
+            word-wrap: break-word;
+            position: relative;
+            animation: slideIn 0.4s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            margin-left: auto;
+            text-align: right;
+            border-bottom-right-radius: 8px;
+        }
+        
+        .message.ai {
+            background: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%);
+            margin-right: auto;
+            border-bottom-left-radius: 8px;
+        }
+        
+        .message-header {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .skill-badge {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 0.75em;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+        
+        /* 控制面板 */
+        .controls {
+            margin-bottom: 25px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 300px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9em;
+        }
+        
+        .skill-selector select {
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: white;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .skill-selector select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
+        /* 输入区域 */
+        .input-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .text-input {
+            flex: 1;
+            padding: 18px 22px;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            resize: none;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+            min-height: 60px;
+        }
+        
+        .text-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .action-btn {
+            padding: 18px 25px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(40,167,69,0.3);
+        }
+        
+        .send-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40,167,69,0.4);
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .record-btn {
+            background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(23,162,184,0.3);
+        }
+        
+        .record-btn.recording {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+            animation: pulseRecord 1.5s infinite;
+        }
+        
+        @keyframes pulseRecord {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .record-btn:hover:not(.recording) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(23,162,184,0.4);
+        }
+        
+        /* 状态显示 */
+        .status {
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            font-weight: 500;
+            display: none;
+            border-left: 4px solid;
+        }
+        
+        .status.info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+            border-left-color: #17a2b8;
+        }
+        
+        .status.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border-left-color: #28a745;
+        }
+        
+        .status.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+        
+        /* 音频播放器 */
+        .audio-player {
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+            border-radius: 15px;
+            border: 2px solid #667eea;
+            text-align: center;
+        }
+        
+        .audio-player p {
+            margin-bottom: 15px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+        
+        .audio-player audio {
+            width: 100%;
+            border-radius: 10px;
+        }
+        
+        .audio-player.hidden {
+            display: none;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102,126,234,.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            header h1 {
+                font-size: 2.5em;
+            }
+            
+            .characters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .conversation {
+                height: 350px;
+            }
+            
+            .input-section {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .action-btn {
+                width: 100%;
+            }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+        
+        .empty-state h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        
+        /* 技能提示 */
+        .skill-hint {
+            background: rgba(102,126,234,0.1);
+            border: 1px solid rgba(102,126,234,0.2);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎭 AI角色扮演</h1>
+            <p>与历史名人和经典角色进行智能对话，体验不同的人生智慧与魅力</p>
+        </header>
+        
+        <!-- 角色选择页面 -->
+        <div id="characterSelection" class="character-selection">
+            <div class="search-section">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索角色：苏格拉底、牛顿、哈利波特、福尔摩斯、孙悟空、林黛玉...">
+                    <button class="search-btn" onclick="searchCharacters()">🔍 搜索角色</button>
+                </div>
+                <div id="searchStatus" class="status"></div>
+            </div>
+            
+            <div id="charactersGrid" class="characters-grid">
+                <div class="empty-state">
+                    <h3>正在加载角色...</h3>
+                    <p>请稍候，我们正在准备精彩的角色阵容</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 聊天页面 -->
+        <div id="chatSection" class="chat-section">
+            <div class="chat-header">
+                <div id="chatAvatar" class="chat-avatar">🤔</div>
+                <div class="chat-info">
+                    <h3 id="chatCharacterName">选择一个角色开始对话</h3>
+                    <p id="chatCharacterDesc">探索AI角色的独特魅力和智慧</p>
+                </div>
+                <button class="back-btn" onclick="backToSelection()">← 返回选择</button>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>选择技能：</label>
+                    <div class="skill-selector">
+                        <select id="skillSelect">
+                            <option value="">自动判断最适合的技能</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="skillHint" class="skill-hint hidden">
+                <strong>技能提示：</strong><span id="skillHintText"></span>
+            </div>
+            
+            <div id="conversation" class="conversation">
+                <div class="message ai">
+                    <div class="message-header">🤖 AI助手</div>
+                    <div>欢迎来到AI角色扮演世界！请选择一个角色，然后开始你的智慧之旅。你可以通过文字或语音与角色对话。</div>
+                </div>
+            </div>
+            
+            <div id="status" class="status"></div>
+            
+            <div class="input-section">
+                <textarea id="textInput" class="text-input" placeholder="在这里输入你想说的话，或者点击录音按钮使用语音输入..." rows="2"></textarea>
+                <button id="sendBtn" class="action-btn send-btn" onclick="sendTextMessage()">
+                    <span>📝</span> 发送
+                </button>
+                <button id="recordBtn" class="action-btn record-btn" onclick="toggleRecording()">
+                    <span>🎤</span> 录音
+                </button>
+            </div>
+            
+            <div id="recordStatus" class="status"></div>
+            
+            <div id="audioPlayer" class="audio-player hidden">
+                <p>🔊 AI角色语音回复</p>
+                <audio controls></audio>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AIRoleplayApp {
+            constructor() {
+                this.characters = [];
+                this.currentCharacter = null;
+                this.chatHistory = [];
+                this.isRecording = false;
+                this.mediaRecorder = null;
+                this.audioChunks = [];
+                
+                this.initElements();
+                this.loadCharacters();
+                this.bindEvents();
+            }
+            
+            initElements() {
+                // 页面元素
+                this.characterSelection = document.getElementById('characterSelection');
+                this.chatSection = document.getElementById('chatSection');
+                this.charactersGrid = document.getElementById('charactersGrid');
+                this.searchInput = document.getElementById('searchInput');
+                this.searchStatus = document.getElementById('searchStatus');
+                
+                // 聊天元素
+                this.chatAvatar = document.getElementById('chatAvatar');
+                this.chatCharacterName = document.getElementById('chatCharacterName');
+                this.chatCharacterDesc = document.getElementById('chatCharacterDesc');
+                this.conversation = document.getElementById('conversation');
+                this.skillSelect = document.getElementById('skillSelect');
+                this.skillHint = document.getElementById('skillHint');
+                this.skillHintText = document.getElementById('skillHintText');
+                
+                // 输入元素
+                this.textInput = document.getElementById('textInput');
+                this.sendBtn = document.getElementById('sendBtn');
+                this.recordBtn = document.getElementById('recordBtn');
+                this.recordStatus = document.getElementById('recordStatus');
+                this.status = document.getElementById('status');
+                this.audioPlayer = document.getElementById('audioPlayer');
+            }
+            
+            bindEvents() {
+                // 搜索输入
+                this.searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.searchCharacters();
+                    }
+                });
+                
+                // 文本输入
+                this.textInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendTextMessage();
+                    }
+                });
+                
+                // 技能选择
+                this.skillSelect.addEventListener('change', (e) => {
+                    this.updateSkillHint(e.target.value);
+                });
+            }
+            
+            async loadCharacters() {
+                try {
+                    this.showSearchStatus('正在加载精彩角色...', 'info');
+                    
+                    // 调用真实的后端API获取角色列表
+                    const response = await fetch('/v1/roles/list');
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    this.characters = data.characters || [];
+                    
+                    console.log('加载的角色数据:', this.characters);
+                    
+                    this.renderCharacters(this.characters);
+                    this.hideSearchStatus();
+                    
+                } catch (error) {
+                    console.error('加载角色错误:', error);
+                    this.showSearchStatus('加载角色失败: ' + error.message, 'error');
+                    
+                    // 如果API调用失败，显示错误信息
+                    this.charactersGrid.innerHTML = `
+                        <div class="empty-state">
+                            <h3>❌ 加载角色失败</h3>
+                            <p>错误信息: ${error.message}</p>
+                            <p>请检查后端服务是否正常运行</p>
+                            <button class="search-btn" onclick="location.reload()">🔄 重新加载</button>
+                        </div>
+                    `;
+                }
+            }
+            
+            renderCharacters(characters) {
+                this.charactersGrid.innerHTML = '';
+                
+                if (characters.length === 0) {
+                    this.charactersGrid.innerHTML = `
+                        <div class="empty-state">
+                            <h3>没有找到匹配的角色</h3>
+                            <p>试试搜索其他关键词，或查看全部角色</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                characters.forEach(character => {
+                    const card = this.createCharacterCard(character);
+                    this.charactersGrid.appendChild(card);
+                });
+            }
+            
+            createCharacterCard(character) {
+                const card = document.createElement('div');
+                card.className = 'character-card fade-in';
+                card.onclick = () => this.selectCharacter(character);
+                
+                card.innerHTML = `
+                    <div class="character-avatar">${character.avatar}</div>
+                    <div class="character-name">${character.name}</div>
+                    <div class="character-description">${character.description}</div>
+                    <div class="character-skills">
+                        ${character.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                    </div>
+                `;
+                
+                return card;
+            }
+            
+            async searchCharacters() {
+                const query = this.searchInput.value.trim();
+                
+                if (!query) {
+                    this.renderCharacters(this.characters);
+                    this.hideSearchStatus();
+                    return;
+                }
+                
+                try {
+                    this.showSearchStatus('正在搜索角色...', 'info');
+                    
+                    // 调用后端搜索API
+                    const response = await fetch(`/v1/roles/search?q=${encodeURIComponent(query)}`);
+                    if (!response.ok) {
+                        throw new Error('搜索失败');
+                    }
+                    
+                    const results = await response.json();
+                    console.log('搜索结果:', results);
+                    
+                    if (results.length === 0) {
+                        this.showSearchStatus('没有找到匹配的角色', 'info');
+                        this.renderCharacters([]);
+                    } else {
+                        this.showSearchStatus(`找到 ${results.length} 个相关角色`, 'success');
+                        // 根据搜索结果筛选角色
+                        const filteredCharacters = this.characters.filter(char =>
+                            results.some(result => result.name === char.name)
+                        );
+                        this.renderCharacters(filteredCharacters);
+                    }
+                } catch (error) {
+                    this.showSearchStatus('搜索失败: ' + error.message, 'error');
+                }
+            }
+            
+            selectCharacter(character) {
+                this.currentCharacter = character;
+                this.chatHistory = [];
+                
+                console.log('选择角色:', character);
+                
+                // 更新聊天界面
+                this.chatAvatar.textContent = character.avatar;
+                this.chatCharacterName.textContent = character.name;
+                this.chatCharacterDesc.textContent = character.description;
+                
+                // 加载技能选项
+                this.skillSelect.innerHTML = '<option value="">自动判断最适合的技能</option>';
+                character.skills.forEach(skill => {
+                    const option = document.createElement('option');
+                    option.value = skill;
+                    option.textContent = skill;
+                    this.skillSelect.appendChild(option);
+                });
+                
+                // 清空对话并添加角色欢迎消息
+                this.conversation.innerHTML = `
+                    <div class="message ai">
+                        <div class="message-header">${character.avatar} ${character.name}</div>
+                        <div>你好！我是${character.name}。${character.personality} 你想和我聊些什么呢？我擅长${character.skills.join('、')}。</div>
+                    </div>
+                `;
+                
+                // 切换页面
+                this.characterSelection.style.display = 'none';
+                this.chatSection.style.display = 'block';
+                this.chatSection.classList.add('fade-in');
+                
+                this.hideAllStatus();
+            }
+            
+            backToSelection() {
+                this.characterSelection.style.display = 'block';
+                this.chatSection.style.display = 'none';
+                this.currentCharacter = null;
+                this.chatHistory = [];
+                
+                // 停止录音如果正在进行
+                if (this.isRecording) {
+                    this.stopRecording();
+                }
+                
+                this.hideAllStatus();
+            }
+            
+            updateSkillHint(skillName) {
+                if (!skillName || !this.currentCharacter) {
+                    this.skillHint.classList.add('hidden');
+                    return;
+                }
+                
+                const skillDescriptions = {
+                    "哲学思辨": "运用苏格拉底式提问法，引导深入思考人生、道德、知识等哲学问题",
+                    "道德教化": "针对道德困境提供指导，帮助思辨善恶对错",
+                    "自我认知引导": "帮助认识自我，发现内在智慧",
+                    "科学原理解释": "用经典物理学原理解释自然现象，深入浅出",
+                    "数学思维训练": "培养逻辑思维和数学推理能力",
+                    "科学方法指导": "传授科学研究的方法和态度",
+                    "魔法咒语教学": "教授魔法咒语的使用方法和原理",
+                    "勇气与友谊指导": "分享面对困难时的勇气和友谊的重要性",
+                    "魔法世界探索": "描述魔法世界的奇妙，激发想象力",
+                    "逻辑推理分析": "运用演绎推理法分析问题，寻找线索",
+                    "观察力训练": "教授敏锐观察和细节分析的技巧",
+                    "案例分析教学": "通过经典案例教授侦探思维和解决问题的方法",
+                    "七十二变神通": "展示变化之术的奥妙和灵活应变的智慧",
+                    "斗战精神激励": "传授不畏强敌、勇于斗争的精神",
+                    "火眼金睛识人": "教授识别真伪、看透本质的智慧",
+                    "诗词创作": "创作和鉴赏古典诗词，表达细腻情感",
+                    "情感细腻解读": "深刻理解和表达复杂细腻的情感",
+                    "古典文学鉴赏": "鉴赏古典文学作品，分享文学之美"
+                };
+                
+                const description = skillDescriptions[skillName];
+                if (description) {
+                    this.skillHintText.textContent = description;
+                    this.skillHint.classList.remove('hidden');
+                } else {
+                    this.skillHint.classList.add('hidden');
+                }
+            }
+            
+            async sendTextMessage() {
+                const message = this.textInput.value.trim();
+                if (!message || !this.currentCharacter) return;
+                
+                // 添加用户消息到界面
+                this.addMessage('user', message);
+                this.textInput.value = '';
+                
+                try {
+                    this.showStatus('🤔 AI正在思考回复...', 'info');
+                    this.sendBtn.innerHTML = '<div class="loading"></div> 思考中';
+                    this.sendBtn.disabled = true;
+                    
+                    // 调用真实的后端API
+                    const formData = new FormData();
+                    formData.append('character_name', this.currentCharacter.name);
+                    formData.append('message', message);
+                    formData.append('history', JSON.stringify(this.chatHistory));
+                    
+                    if (this.skillSelect.value) {
+                        formData.append('skill', this.skillSelect.value);
+                    }
+                    
+                    console.log('发送对话请求:', {
+                        character: this.currentCharacter.name,
+                        message: message,
+                        skill: this.skillSelect.value,
+                        historyLength: this.chatHistory.length
+                    });
+                    
+                    const response = await fetch('/v1/roles/chat', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`对话失败: ${response.status} - ${errorText}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log('对话响应:', result);
+                    
+                    if (!result.success) {
+                        throw new Error(result.message || '对话失败');
+                    }
+                    
+                    // 添加AI回复到界面
+                    this.addMessage('ai', result.ai_response, result.skill_used);
+                    
+                    // 更新对话历史
+                    this.chatHistory = result.history;
+                    
+                    // 调用TTS生成语音回复
+                    if (result.voice_type) {
+                        await this.generateSpeech(result.ai_response, result.voice_type);
+                    }
+                    
+                    this.showStatus('💬 对话完成！', 'success');
+                    
+                } catch (error) {
+                    console.error('对话错误:', error);
+                    this.showStatus('❌ 对话失败: ' + error.message, 'error');
+                } finally {
+                    this.sendBtn.innerHTML = '<span>📝</span> 发送';
+                    this.sendBtn.disabled = false;
+                }
+            }
+            
+            async generateSpeech(text, voiceType) {
+                try {
+                    console.log('生成语音:', { text: text.substring(0, 50), voiceType });
+                    
+                    const formData = new FormData();
+                    formData.append('text', text);
+                    formData.append('voice_type', voiceType);
+                    formData.append('speed_ratio', '1.0');
+                    
+                    const response = await fetch('/v1/tts', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('TTS响应:', result);
+                        
+                        if (result.success) {
+                            this.playAudio(result.audio_url);
+                        }
+                    } else {
+                        console.warn('TTS生成失败:', response.status, response.statusText);
+                    }
+                } catch (error) {
+                    console.warn('TTS生成异常:', error);
+                }
+            }
+            
+            async toggleRecording() {
+                if (!this.currentCharacter) {
+                    this.showStatus('请先选择一个角色开始对话', 'error');
+                    return;
+                }
+                
+                if (this.isRecording) {
+                    this.stopRecording();
+                } else {
+                    await this.startRecording();
+                }
+            }
+            
+            async startRecording() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            sampleRate: 16000,
+                            channelCount: 1,
+                            echoCancellation: true,
+                            noiseSuppression: true
+                        }
+                    });
+                    
+                    this.mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    
+                    this.audioChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        this.audioChunks.push(event.data);
+                    };
+                    
+                    this.mediaRecorder.onstop = () => {
+                        this.processRecording();
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    this.mediaRecorder.start();
+                    this.isRecording = true;
+                    
+                    this.recordBtn.classList.add('recording');
+                    this.recordBtn.innerHTML = '<span>⏹️</span> 停止';
+                    this.showRecordStatus('🎙️ 正在录音... 再次点击停止', 'info');
+                    
+                } catch (error) {
+                    this.showRecordStatus('❌ 无法访问麦克风: ' + error.message, 'error');
+                }
+            }
+            
+            stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    
+                    this.recordBtn.classList.remove('recording');
+                    this.recordBtn.innerHTML = '<span>🎤</span> 录音';
+                    this.showRecordStatus('⏳ 正在处理录音...', 'info');
+                }
+            }
+            
+            async processRecording() {
+                try {
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    
+                    if (audioBlob.size < 1000) {
+                        this.showRecordStatus('⚠️ 录音时间太短，请重试', 'error');
+                        return;
+                    }
+                    
+                    console.log('处理录音文件:', audioBlob.size, 'bytes');
+                    
+                    // 调用ASR API进行语音识别
+                    const formData = new FormData();
+                    formData.append('file', audioBlob, 'recording.webm');
+                    formData.append('language', 'auto');
+                    
+                    const asrResponse = await fetch('/v1/asr', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    console.log('ASR响应状态:', asrResponse.status);
+                    
+                    if (!asrResponse.ok) {
+                        throw new Error(`语音识别失败: ${asrResponse.status}`);
+                    }
+                    
+                    const asrResult = await asrResponse.json();
+                    console.log('ASR结果:', asrResult);
+                    
+                    if (!asrResult.success || !asrResult.text) {
+                        throw new Error('语音识别结果为空');
+                    }
+                    
+                    // 将识别的文字设置到输入框
+                    this.textInput.value = asrResult.text;
+                    this.showRecordStatus(`✅ 识别成功: "${asrResult.text}"`, 'success');
+                    
+                    // 1.5秒后自动发送消息
+                    setTimeout(() => {
+                        this.sendTextMessage();
+                    }, 1500);
+                    
+                } catch (error) {
+                    console.error('录音处理错误:', error);
+                    this.showRecordStatus('❌ 录音处理失败: ' + error.message, 'error');
+                }
+            }
+            
+            addMessage(role, content, skillUsed = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}`;
+                
+                const roleName = role === 'user' ? '你' : this.currentCharacter.name;
+                const roleIcon = role === 'user' ? '👤' : this.currentCharacter.avatar;
+                
+                let skillBadge = '';
+                if (skillUsed) {
+                    skillBadge = `<span class="skill-badge">${skillUsed}</span>`;
+                }
+                
+                messageDiv.innerHTML = `
+                    <div class="message-header">${roleIcon} ${roleName}${skillBadge}</div>
+                    <div>${content}</div>
+                `;
+                
+                this.conversation.appendChild(messageDiv);
+                this.conversation.scrollTop = this.conversation.scrollHeight;
+            }
+            
+            playAudio(audioUrl) {
+                try {
+                    console.log('播放音频:', audioUrl);
+                    
+                    const audio = this.audioPlayer.querySelector('audio');
+                    audio.src = audioUrl;
+                    
+                    this.audioPlayer.classList.remove('hidden');
+                    audio.play().catch(error => {
+                        console.warn('自动播放失败，用户需手动播放:', error);
+                    });
+                    
+                } catch (error) {
+                    console.error('音频播放失败:', error);
+                }
+            }
+            
+            showStatus(message, type = 'info') {
+                this.status.textContent = message;
+                this.status.className = `status ${type}`;
+                this.status.style.display = 'block';
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        this.status.style.display = 'none';
+                    }, 3000);
+                }
+            }
+            
+            showSearchStatus(message, type = 'info') {
+                this.searchStatus.textContent = message;
+                this.searchStatus.className = `status ${type}`;
+                this.searchStatus.style.display = 'block';
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        this.searchStatus.style.display = 'none';
+                    }, 2000);
+                }
+            }
+            
+            showRecordStatus(message, type = 'info') {
+                this.recordStatus.textContent = message;
+                this.recordStatus.className = `status ${type}`;
+                this.recordStatus.style.display = 'block';
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        this.recordStatus.style.display = 'none';
+                    }, 3000);
+                }
+            }
+            
+            hideAllStatus() {
+                this.status.style.display = 'none';
+                this.searchStatus.style.display = 'none';
+                this.recordStatus.style.display = 'none';
+            }
+            
+            hideSearchStatus() {
+                this.searchStatus.style.display = 'none';
+            }
+        }
+        
+        // 全局函数
+        function searchCharacters() {
+            app.searchCharacters();
+        }
+        
+        function backToSelection() {
+            app.backToSelection();
+        }
+        
+        function sendTextMessage() {
+            app.sendTextMessage();
+        }
+        
+        function toggleRecording() {
+            app.toggleRecording();
+        }
+        
+        // 初始化应用
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new AIRoleplayApp();
+        });
+    </script>
+</body>
+</html>
