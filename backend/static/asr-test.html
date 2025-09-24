@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASR语音识别测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #f0f0f0;
+            border-radius: 10px;
+        }
+        
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        /* 状态检查区域 */
+        .status-check {
+            background: #f8f9fa;
+        }
+        
+        .check-btn {
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .check-btn:hover {
+            background: #218838;
+        }
+        
+        .status-result {
+            display: none;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .status-result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .status-result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .config-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        /* 录音区域 */
+        .recording-section {
+            text-align: center;
+        }
+        
+        .record-controls {
+            margin: 20px 0;
+        }
+        
+        .record-btn {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: none;
+            font-size: 40px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+        
+        .record-btn:not(.recording) {
+            background: #28a745;
+            color: white;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .record-btn.recording {
+            background: #dc3545;
+            color: white;
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+        
+        .record-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .record-status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        
+        .record-status.idle {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .record-status.recording {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .record-status.processing {
+            background: #cce7ff;
+            color: #004085;
+        }
+        
+        /* 文件上传区域 */
+        .upload-section {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        
+        .upload-section:hover {
+            border-color: #667eea;
+        }
+        
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #f0f8ff;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        
+        .upload-btn:hover {
+            background: #5a67d8;
+        }
+        
+        /* 结果显示区域 */
+        .result {
+            display: none;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 10px;
+            word-wrap: break-word;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .result-text {
+            font-size: 18px;
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .result-meta {
+            font-size: 14px;
+            color: #666;
+            margin-top: 15px;
+        }
+        
+        .result-meta div {
+            margin: 5px 0;
+        }
+        
+        /* 日志区域 */
+        .log-section {
+            background: #f8f9fa;
+        }
+        
+        .log-content {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .clear-log-btn {
+            padding: 5px 15px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102,126,234,.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .record-btn {
+                width: 80px;
+                height: 80px;
+                font-size: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 ASR语音识别测试</h1>
+            <p>测试"语音输入 → 文字"这条链路是否正常工作</p>
+        </div>
+        
+        <!-- 系统状态检查 -->
+        <div class="test-section status-check">
+            <h3>1. 系统状态检查</h3>
+            <p>首先检查ASR配置是否正确：</p>
+            <button class="check-btn" onclick="checkSystemStatus()">🔍 检查配置</button>
+            <div id="statusResult" class="status-result"></div>
+        </div>
+        
+        <!-- 录音测试 -->
+        <div class="test-section recording-section">
+            <h3>2. 录音测试</h3>
+            <p>点击下方按钮开始录音，再次点击停止并识别：</p>
+            
+            <div class="record-controls">
+                <button id="recordBtn" class="record-btn" onclick="toggleRecording()">🎤</button>
+                <div id="recordStatus" class="record-status idle">点击麦克风开始录音</div>
+            </div>
+            
+            <div id="recordResult" class="result"></div>
+        </div>
+        
+        <!-- 文件上传测试 -->
+        <div class="test-section">
+            <h3>3. 文件上传测试</h3>
+            <p>拖拽音频文件到下方区域，或点击按钮选择文件：</p>
+            
+            <div class="upload-section" id="uploadArea">
+                <div>
+                    <p>支持格式：MP3、WAV、M4A、WebM、OGG、FLAC</p>
+                    <p>最大文件大小：50MB</p>
+                    
+                    <input type="file" id="fileInput" class="file-input" 
+                           accept="audio/*" onchange="handleFileUpload(event)">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        📁 选择音频文件
+                    </button>
+                </div>
+            </div>
+            
+            <div id="uploadResult" class="result"></div>
+        </div>
+        
+        <!-- 调试日志 -->
+        <div class="test-section log-section">
+            <h3>4. 调试日志</h3>
+            <button class="clear-log-btn" onclick="clearLog()">清空日志</button>
+            <div id="logContent" class="log-content">等待操作...</div>
+        </div>
+    </div>
+
+    <script>
+        class ASRTester {
+            constructor() {
+                this.isRecording = false;
+                this.mediaRecorder = null;
+                this.audioChunks = [];
+                
+                this.initUploadArea();
+                this.log('ASR测试器已初始化');
+            }
+            
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logContent = document.getElementById('logContent');
+                logContent.textContent += `[${timestamp}] ${message}\n`;
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+            
+            initUploadArea() {
+                const uploadArea = document.getElementById('uploadArea');
+                
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+                
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        this.processAudioFile(files[0]);
+                    }
+                });
+            }
+            
+            async checkSystemStatus() {
+                this.log('检查系统状态...');
+                const statusResult = document.getElementById('statusResult');
+                
+                try {
+                    const response = await fetch('/v1/asr/test');
+                    const result = await response.json();
+                    
+                    if (result.status === 'OK') {
+                        statusResult.className = 'status-result success';
+                        statusResult.innerHTML = `
+                            <h4>✅ 配置正常！</h4>
+                            <div class="config-item">API密钥: ${result.configuration.api_key_configured ? '已配置' : '未配置'}</div>
+                            <div class="config-item">API连通性: ${result.configuration.api_connectivity ? '正常' : '异常'}</div>
+                            <div class="config-item">公网地址: ${result.configuration.public_url}</div>
+                            <div class="config-item">上传目录: ${result.configuration.upload_dir_writable ? '可写' : '不可写'}</div>
+                        `;
+                        this.log('系统配置检查通过');
+                    } else {
+                        statusResult.className = 'status-result error';
+                        statusResult.innerHTML = `
+                            <h4>❌ 发现问题：</h4>
+                            <ul>
+                                ${result.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                            <h5>解决方案：</h5>
+                            <ul>
+                                ${result.quick_fixes.map(fix => `<li>${fix}</li>`).join('')}
+                            </ul>
+                        `;
+                        this.log(`系统配置有问题: ${result.issues.join(', ')}`);
+                    }
+                } catch (error) {
+                    statusResult.className = 'status-result error';
+                    statusResult.innerHTML = `<h4>❌ 检查失败：${error.message}</h4>`;
+                    this.log(`系统状态检查失败: ${error.message}`);
+                }
+                
+                statusResult.style.display = 'block';
+            }
+            
+            async toggleRecording() {
+                if (this.isRecording) {
+                    this.stopRecording();
+                } else {
+                    await this.startRecording();
+                }
+            }
+            
+            async startRecording() {
+                try {
+                    this.log('请求麦克风权限...');
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            sampleRate: 16000,
+                            channelCount: 1,
+                            echoCancellation: true,
+                            noiseSuppression: true
+                        }
+                    });
+                    
+                    this.mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    
+                    this.audioChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        this.audioChunks.push(event.data);
+                        this.log(`音频数据块: ${event.data.size} bytes`);
+                    };
+                    
+                    this.mediaRecorder.onstop = () => {
+                        this.processRecording();
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    this.mediaRecorder.start();
+                    this.isRecording = true;
+                    
+                    // 更新UI
+                    const recordBtn = document.getElementById('recordBtn');
+                    const recordStatus = document.getElementById('recordStatus');
+                    
+                    recordBtn.classList.add('recording');
+                    recordBtn.textContent = '⏹️';
+                    recordStatus.className = 'record-status recording';
+                    recordStatus.textContent = '正在录音... 再次点击停止';
+                    
+                    this.log('录音开始');
+                    
+                } catch (error) {
+                    this.log(`录音启动失败: ${error.message}`);
+                    this.showResult('recordResult', false, `麦克风访问失败: ${error.message}`);
+                }
+            }
+            
+            stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    
+                    // 更新UI
+                    const recordBtn = document.getElementById('recordBtn');
+                    const recordStatus = document.getElementById('recordStatus');
+                    
+                    recordBtn.classList.remove('recording');
+                    recordBtn.textContent = '🎤';
+                    recordStatus.className = 'record-status processing';
+                    recordStatus.textContent = '处理录音中...';
+                    
+                    this.log('录音停止，开始处理...');
+                }
+            }
+            
+            async processRecording() {
+                try {
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    this.log(`录音文件大小: ${audioBlob.size} bytes`);
+                    
+                    if (audioBlob.size < 1000) {
+                        throw new Error('录音时间太短，请重试');
+                    }
+                    
+                    await this.sendToASR(audioBlob, 'recording.webm');
+                    
+                } catch (error) {
+                    this.log(`录音处理失败: ${error.message}`);
+                    this.showResult('recordResult', false, error.message);
+                } finally {
+                    // 重置UI
+                    const recordStatus = document.getElementById('recordStatus');
+                    recordStatus.className = 'record-status idle';
+                    recordStatus.textContent = '点击麦克风开始录音';
+                }
+            }
+            
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    this.processAudioFile(file);
+                }
+            }
+            
+            async processAudioFile(file) {
+                this.log(`处理文件: ${file.name} (${file.size} bytes, ${file.type})`);
+                
+                // 验证文件
+                if (!file.type.startsWith('audio/')) {
+                    this.showResult('uploadResult', false, '请选择音频文件');
+                    return;
+                }
+                
+                if (file.size > 50 * 1024 * 1024) {
+                    this.showResult('uploadResult', false, '文件大小不能超过50MB');
+                    return;
+                }
+                
+                await this.sendToASR(file, file.name);
+            }
+            
+            async sendToASR(audioFile, filename) {
+                const resultId = filename.includes('recording') ? 'recordResult' : 'uploadResult';
+                
+                try {
+                    this.log(`发送到ASR: ${filename}`);
+                    
+                    const formData = new FormData();
+                    formData.append('file', audioFile, filename);
+                    formData.append('language', 'auto');
+                    
+                    const response = await fetch('/v1/asr', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    this.log(`ASR响应状态: ${response.status}`);
+                    
+                    const result = await response.json();
+                    this.log(`ASR响应: ${JSON.stringify(result, null, 2)}`);
+                    
+                    if (response.ok && result.success) {
+                        this.showResult(resultId, true, result.text, {
+                            音频格式: result.audio_format,
+                            文件大小: `${Math.round(result.file_size / 1024)} KB`,
+                            音频时长: result.audio_duration_ms ? `${result.audio_duration_ms} ms` : '未知',
+                            请求ID: result.qiniu_reqid,
+                            音频URL: result.audio_url
+                        });
+                    } else {
+                        const errorMsg = result.detail?.message || result.message || JSON.stringify(result);
+                        this.showResult(resultId, false, errorMsg);
+                    }
+                    
+                } catch (error) {
+                    this.log(`ASR请求失败: ${error.message}`);
+                    this.showResult(resultId, false, `请求失败: ${error.message}`);
+                }
+            }
+            
+            showResult(elementId, success, text, metadata = null) {
+                const resultElement = document.getElementById(elementId);
+                
+                resultElement.className = `result ${success ? 'success' : 'error'}`;
+                
+                let html = '';
+                
+                if (success) {
+                    html += '<h4>✅ 识别成功！</h4>';
+                    if (text) {
+                        html += `<div class="result-text">"${text}"</div>`;
+                    } else {
+                        html += '<div class="result-text">（识别结果为空）</div>';
+                    }
+                    
+                    if (metadata) {
+                        html += '<div class="result-meta">';
+                        for (const [key, value] of Object.entries(metadata)) {
+                            html += `<div><strong>${key}:</strong> ${value}</div>`;
+                        }
+                        html += '</div>';
+                    }
+                } else {
+                    html += `<h4>❌ 识别失败</h4>`;
+                    html += `<div>${text}</div>`;
+                }
+                
+                resultElement.innerHTML = html;
+                resultElement.style.display = 'block';
+                
+                // 滚动到结果
+                resultElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        // 全局函数
+        let asrTester;
+        
+        function checkSystemStatus() {
+            asrTester.checkSystemStatus();
+        }
+        
+        function toggleRecording() {
+            asrTester.toggleRecording();
+        }
+        
+        function handleFileUpload(event) {
+            asrTester.handleFileUpload(event);
+        }
+        
+        function clearLog() {
+            document.getElementById('logContent').textContent = '日志已清空\n';
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            asrTester = new ASRTester();
+        });
+    </script>
+</body>
+</html>

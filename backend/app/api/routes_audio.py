@@ -384,3 +384,88 @@ def cleanup_audio_files(max_age_hours: int = 24):
         "max_age_hours": max_age_hours,
         "errors": errors
     }
+
+
+
+def _call_qiniu_tts(text: str, voice_type: str, speed_ratio: float) -> bytes:
+    """调用七牛云TTS接口"""
+    if not OPENAI_API_KEY:
+        raise HTTPException(500, {"error": "MISSING_API_KEY", "message": "TTS服务未配置"})
+    
+    url = f"{OPENAI_BASE_URL}/voice/tts"
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    
+    payload = {
+        "audio": {
+            "voice_type": voice_type,
+            "encoding": "mp3", 
+            "speed_ratio": speed_ratio
+        },
+        "request": {
+            "text": text
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        if response.status_code != 200:
+            raise HTTPException(response.status_code, f"TTS错误: {response.text}")
+        
+        result = response.json()
+        if "data" in result:
+            import base64
+            audio_data = base64.b64decode(result["data"])
+            return audio_data
+        else:
+            raise HTTPException(500, "TTS响应格式错误")
+            
+    except requests.RequestException as e:
+        raise HTTPException(500, f"TTS请求失败: {str(e)}")
+
+@router.post("/tts")
+async def text_to_speech(
+    text: str = Form(...),
+    voice_type: str = Form("qiniu_zh_female_wwxkjx"),
+    speed_ratio: float = Form(1.0)
+):
+    """文字转语音"""
+    try:
+        audio_data = _call_qiniu_tts(text, voice_type, speed_ratio)
+        
+        # 保存音频文件
+        filename = f"{uuid.uuid4().hex}.mp3"
+        file_path = UPLOAD_DIR / filename
+        file_path.write_bytes(audio_data)
+        
+        audio_url = f"{PUBLIC_BASE_URL}/static/uploads/{filename}"
+        
+        return JSONResponse({
+            "success": True,
+            "audio_url": audio_url,
+            "text": text,
+            "voice_type": voice_type,
+            "speed_ratio": speed_ratio
+        })
+        
+    except Exception as e:
+        raise HTTPException(500, f"TTS处理失败: {str(e)}")
+
+@router.get("/voices")
+def get_available_voices():
+    """获取可用TTS音色列表"""
+    if not OPENAI_API_KEY:
+        raise HTTPException(500, "未配置API密钥")
+    
+    url = f"{OPENAI_BASE_URL}/voice/list"
+    headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        if response.status_code != 200:
+            raise HTTPException(response.status_code, f"获取音色失败: {response.text}")
+        return response.json()
+    except requests.RequestException as e:
+        raise HTTPException(500, f"请求失败: {str(e)}")

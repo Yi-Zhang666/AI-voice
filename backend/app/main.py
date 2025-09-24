@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
+from fastapi.responses import FileResponse
 from .api.routes_chat import router as chat_router
 from .api.routes_audio import router as audio_router
 from .api.routes_eval import router as eval_router
@@ -44,6 +44,13 @@ def healthz():
         "static_dir": str(STATIC_DIR),
     }
 
+@app.get("/asr-test")
+async def asr_test_page():
+    return FileResponse("static/asr-test.html")
+
+@app.get("/roleplay")
+async def roleplay_page():
+    return FileResponse("static/roleplay.html")
 # 路由
 app.include_router(chat_router)
 app.include_router(audio_router)
