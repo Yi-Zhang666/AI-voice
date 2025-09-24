@@ -13,6 +13,9 @@ from .api.routes_eval import router as eval_router
 from .core.config import USE_OPENAI, OPENAI_BASE_URL
 
 app = FastAPI(title="AI 角色扮演平台 - 后端")
+from .api.routes_roles import router as roles_router
+# ...
+app.include_router(roles_router)
 
 # CORS
 app.add_middleware(
